@@ -244,37 +244,26 @@ def display_annotation_controls():
         st.info("Load a video to start annotating")
         return
     
-    # Playback controls
+    # Simple playback controls - removed redundant buttons
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("⏮️ Previous"):
-            previous_frame()
+        if st.button("⏪ -10s", help="Go back 10 seconds"):
+            new_time = max(0, st.session_state.current_time - 10.0)
+            seek_to_time(new_time)
     
     with col2:
         if st.button("⏯️ Play/Pause"):
             toggle_playback()
     
     with col3:
-        if st.button("⏭️ Next"):
-            next_frame()
-    
-    # Time navigation
-    max_time = st.session_state.video_processor.duration
-    current_time = st.slider(
-        "Time (seconds)",
-        min_value=0.0,
-        max_value=max_time,
-        value=st.session_state.current_time,
-        step=0.1,
-        key="time_slider"
-    )
-    
-    if current_time != st.session_state.current_time:
-        seek_to_time(current_time)
+        if st.button("⏩ +10s", help="Go forward 10 seconds"):
+            new_time = min(st.session_state.video_processor.duration, 
+                          st.session_state.current_time + 10.0)
+            seek_to_time(new_time)
 
 def display_video_player():
-    """Display video player with current frame and enhanced controls"""
+    """Display video player with simplified and improved controls"""
     
     if not st.session_state.video_loaded:
         return
@@ -286,54 +275,62 @@ def display_video_player():
         # Draw annotations on frame
         annotated_frame = draw_annotations_on_frame(frame)
         
-        # Display frame
-        st.image(annotated_frame, channels="BGR", use_column_width=True)
+        # Display frame with modern parameter
+        st.image(annotated_frame, channels="BGR", use_container_width=True)
         
-        # Enhanced playback controls
-        col1, col2, col3, col4, col5 = st.columns(5)
+        # Main time navigation slider - smooth and responsive
+        st.markdown("### 🎬 Video Navigation")
         
-        with col1:
-            if st.button("⏮️ Start", help="Go to beginning"):
-                seek_to_time(0.0)
-                
-        with col2:
-            if st.button("⏪ -1s", help="Go back 1 second"):
-                new_time = max(0, st.session_state.current_time - 1.0)
-                seek_to_time(new_time)
-                
-        with col3:
-            if st.button("⏯️ Play/Pause", help="Toggle playback"):
-                toggle_playback()
-                
-        with col4:
-            if st.button("⏩ +1s", help="Go forward 1 second"):
-                new_time = min(st.session_state.video_processor.duration, 
-                              st.session_state.current_time + 1.0)
-                seek_to_time(new_time)
-                
-        with col5:
-            if st.button("⏭️ End", help="Go to end"):
-                seek_to_time(st.session_state.video_processor.duration - 0.1)
-        
-        # Time slider for seeking
+        # Time slider for seeking - the main control
         current_time = st.slider(
-            "Seek to time",
+            "Timeline",
             min_value=0.0,
             max_value=st.session_state.video_processor.duration,
             value=st.session_state.current_time,
             step=0.1,
             format="%.1fs",
-            key="time_slider"
+            help="Drag to navigate through the video",
+            key="main_timeline_slider"
         )
         
         # Update time if slider changed
         if abs(current_time - st.session_state.current_time) > 0.05:
             seek_to_time(current_time)
         
+        # Quick navigation buttons - simplified
+        col1, col2, col3, col4, col5 = st.columns(5)
+        
+        with col1:
+            if st.button("⏮️ Start"):
+                seek_to_time(0.0)
+                
+        with col2:
+            if st.button("⏪ -1s"):
+                new_time = max(0, st.session_state.current_time - 1.0)
+                seek_to_time(new_time)
+                
+        with col3:
+            if st.button("⏸️ Pause"):
+                st.session_state.current_time = st.session_state.current_time  # Just refresh
+                
+        with col4:
+            if st.button("⏩ +1s"):
+                new_time = min(st.session_state.video_processor.duration, 
+                              st.session_state.current_time + 1.0)
+                seek_to_time(new_time)
+                
+        with col5:
+            if st.button("⏭️ End"):
+                seek_to_time(st.session_state.video_processor.duration - 0.1)
+        
         # Display frame info
-        st.caption(f"Frame: {st.session_state.current_frame} | "
-                  f"Time: {st.session_state.current_time:.2f}s / {st.session_state.video_processor.duration:.2f}s | "
-                  f"FPS: {st.session_state.video_processor.fps:.1f}")
+        st.caption(f"📍 **Time:** {st.session_state.current_time:.2f}s / {st.session_state.video_processor.duration:.2f}s | "
+                  f"🎬 **Frame:** {st.session_state.current_frame} | "
+                  f"📊 **FPS:** {st.session_state.video_processor.fps:.1f}")
+        
+        # Keyboard shortcuts info
+        st.info("💡 **Tip:** Use the timeline slider for smooth navigation. Fine-tune with +1s/-1s buttons for precise positioning.")
+        
     else:
         st.error("❌ Unable to load video frame. Please check the video file.")
 

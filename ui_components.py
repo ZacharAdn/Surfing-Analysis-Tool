@@ -33,7 +33,7 @@ class VideoPlayer:
                 display_frame = self.draw_annotations(display_frame, annotations)
             
             # Display in Streamlit
-            st.image(display_frame, channels="BGR", use_column_width=True)
+            st.image(display_frame, channels="BGR", use_container_width=True)
     
     def draw_annotations(self, frame: np.ndarray, annotations: List) -> np.ndarray:
         """
