@@ -11,7 +11,6 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 from pathlib import Path
-import time
 
 # Import our modules
 from video_processor import VideoProcessor
@@ -81,16 +80,6 @@ def initialize_session_state():
     
     if 'drawing_bbox' not in st.session_state:
         st.session_state.drawing_bbox = False
-    
-    # Add auto-play functionality
-    if 'is_playing' not in st.session_state:
-        st.session_state.is_playing = False
-    
-    if 'playback_speed' not in st.session_state:
-        st.session_state.playback_speed = 0.5  # Default slow playback
-    
-    if 'last_update_time' not in st.session_state:
-        st.session_state.last_update_time = 0.0
 
 def handle_file_operations():
     """Handle video file loading and annotation saving/loading"""
@@ -274,36 +263,10 @@ def display_annotation_controls():
             seek_to_time(new_time)
 
 def display_video_player():
-    """Display video player with auto-play functionality"""
+    """Display video player with simplified and improved controls"""
     
     if not st.session_state.video_loaded:
         return
-    
-    # Auto-play functionality
-    if st.session_state.is_playing:
-        current_real_time = time.time()
-        
-        # Calculate time advancement based on playback speed
-        if st.session_state.last_update_time > 0:
-            time_diff = current_real_time - st.session_state.last_update_time
-            video_time_advance = time_diff * st.session_state.playback_speed
-            
-            new_time = st.session_state.current_time + video_time_advance
-            
-            # Check if we've reached the end
-            if new_time >= st.session_state.video_processor.duration:
-                st.session_state.is_playing = False
-                new_time = st.session_state.video_processor.duration - 0.1
-            
-            # Update current time
-            if new_time != st.session_state.current_time:
-                st.session_state.current_time = new_time
-                st.session_state.current_frame = int(new_time * st.session_state.video_processor.fps)
-        
-        st.session_state.last_update_time = current_real_time
-        
-        # Auto-refresh when playing
-        st.rerun()
     
     # Get current frame
     frame = st.session_state.video_processor.get_frame_at_time(st.session_state.current_time)
@@ -334,71 +297,39 @@ def display_video_player():
         if abs(current_time - st.session_state.current_time) > 0.05:
             seek_to_time(current_time)
         
-        # Playback controls - enhanced with auto-play
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        # Quick navigation buttons - simplified
+        col1, col2, col3, col4, col5 = st.columns(5)
         
         with col1:
             if st.button("⏮️ Start"):
                 seek_to_time(0.0)
                 
         with col2:
-            if st.button("⏪ -10s"):
-                new_time = max(0, st.session_state.current_time - 10.0)
+            if st.button("⏪ -1s"):
+                new_time = max(0, st.session_state.current_time - 1.0)
                 seek_to_time(new_time)
                 
         with col3:
-            # Play/Pause toggle button
-            if st.session_state.is_playing:
-                if st.button("⏸️ Pause"):
-                    st.session_state.is_playing = False
-                    st.rerun()
-            else:
-                if st.button("▶️ Play"):
-                    st.session_state.is_playing = True
-                    st.session_state.last_update_time = 0  # Reset timer
-                    st.rerun()
+            if st.button("⏸️ Pause"):
+                st.session_state.current_time = st.session_state.current_time  # Just refresh
                 
         with col4:
-            if st.button("⏩ +10s"):
+            if st.button("⏩ +1s"):
                 new_time = min(st.session_state.video_processor.duration, 
-                              st.session_state.current_time + 10.0)
+                              st.session_state.current_time + 1.0)
                 seek_to_time(new_time)
                 
         with col5:
             if st.button("⏭️ End"):
                 seek_to_time(st.session_state.video_processor.duration - 0.1)
         
-        with col6:
-            # Playback speed control
-            st.session_state.playback_speed = st.selectbox(
-                "Speed",
-                [0.25, 0.5, 1.0, 2.0],
-                index=1,  # Default to 0.5x
-                format_func=lambda x: f"{x}x",
-                key="speed_select"
-            )
-        
-        # Fine controls
-        col7, col8 = st.columns(2)
-        with col7:
-            if st.button("⏪ -1s"):
-                new_time = max(0, st.session_state.current_time - 1.0)
-                seek_to_time(new_time)
-        with col8:
-            if st.button("⏩ +1s"):
-                new_time = min(st.session_state.video_processor.duration, 
-                              st.session_state.current_time + 1.0)
-                seek_to_time(new_time)
-        
         # Display frame info
-        play_status = "▶️ Playing" if st.session_state.is_playing else "⏸️ Paused"
         st.caption(f"📍 **Time:** {st.session_state.current_time:.2f}s / {st.session_state.video_processor.duration:.2f}s | "
                   f"🎬 **Frame:** {st.session_state.current_frame} | "
-                  f"📊 **FPS:** {st.session_state.video_processor.fps:.1f} | "
-                  f"🎮 **Status:** {play_status} ({st.session_state.playback_speed}x)")
+                  f"📊 **FPS:** {st.session_state.video_processor.fps:.1f}")
         
-        # Enhanced tips
-        st.info("💡 **Controls:** ▶️ Play for automatic playback | Use timeline slider for quick navigation | Speed control for different playback rates")
+        # Keyboard shortcuts info
+        st.info("💡 **Tip:** Use the timeline slider for smooth navigation. Fine-tune with +1s/-1s buttons for precise positioning.")
         
     else:
         st.error("❌ Unable to load video frame. Please check the video file.")
@@ -593,7 +524,7 @@ def next_frame():
         st.session_state.current_time = st.session_state.current_frame / st.session_state.video_processor.fps
 
 def seek_to_time(time):
-    """Seek to specific time with improved accuracy and auto-play handling"""
+    """Seek to specific time with improved accuracy"""
     if not st.session_state.video_loaded:
         return
         
@@ -604,9 +535,6 @@ def seek_to_time(time):
     st.session_state.current_time = time
     st.session_state.current_frame = int(time * st.session_state.video_processor.fps)
     
-    # Reset auto-play timing when manually seeking
-    st.session_state.last_update_time = 0.0
-    
     # Force UI refresh
     st.rerun()
 
@@ -615,6 +543,10 @@ def toggle_playback():
     if not st.session_state.video_loaded:
         return
         
+    # Initialize playback state if not exists
+    if 'is_playing' not in st.session_state:
+        st.session_state.is_playing = False
+    
     # Toggle playback state
     st.session_state.is_playing = not st.session_state.is_playing
     
